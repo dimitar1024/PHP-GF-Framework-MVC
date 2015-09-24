@@ -5,6 +5,7 @@
         <group>
             <file>file:/C:/xampp/htdocs/gf/App.php</file>
             <file>file:/C:/xampp/htdocs/gf/Loader.php</file>
+            <file>file:/C:/xampp/htdocs/gf/Config.php</file>
         </group>
     </open-files>
 </project-private>

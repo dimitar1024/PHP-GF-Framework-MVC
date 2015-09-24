@@ -8,7 +8,7 @@
 /**
  * Description of FrontController
  *
- * @author gatakka
+ * @author dimitar1024
  */
 
 namespace GF;

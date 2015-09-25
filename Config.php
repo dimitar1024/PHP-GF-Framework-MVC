@@ -63,12 +63,9 @@ class Config {
     
     public function __get($name) {
 
-        if (!array_key_exists($name, $this -> _configArray)) 
-        { 
-            $this -> includeConfigFile($this -> _configFolder . $name . '.php'); 
-            
+        if (!$this->_configArray[$name]) {            
+            $this->includeConfigFile($this->_configFolder . $name . '.php');
         }
-        
         if (array_key_exists($name, $this->_configArray)) {            
             return $this->_configArray[$name];
         }

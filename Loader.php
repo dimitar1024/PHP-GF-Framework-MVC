@@ -33,9 +33,7 @@ class Loader {
     public static function loadClass($class) {        
         foreach (self::$namespaces as $k => $v) {
             if (strpos($class, $k) === 0) {
-                
                 $file = realpath(substr_replace(str_replace('\\', DIRECTORY_SEPARATOR, $class), $v, 0, strlen($k)) . '.php');                               
-                
                 if ($file && is_readable($file)) {
                     include $file;
                 } else {
@@ -62,6 +60,17 @@ class Loader {
             throw new \Exception('Invalid namespace:' . $namespace);
         }
     }   
+    
+    public static function registerNamespaces($ar) {
+        if (is_array($ar)) {
+            foreach ($ar as $k => $v) {
+                self::registerNamespace($k, $v);
+            }
+        } else {
+            throw new \Exception('Invalid namespaces');
+        }
+    }
+    
     
     public static function getNamespaces() {
         return self::$namespaces;

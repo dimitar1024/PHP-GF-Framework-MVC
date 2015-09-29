@@ -1,115 +1,152 @@
 <?php
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of SimpleDB
- *
- * @author dimitar1024
- */
-
 namespace GF\DB;
 
-class SimpleDB {
 
-    protected $connection = 'default';
-    private $db = null;    
-    private $stmt = null;
-    private $params = array();    
-    private $sql;
-    
-    public function __construct($connection = null) {
+use GF\App;
+use GF\Normalizer;
+
+class SimpleDB
+{
+    protected $_connection = 'default';
+    private $_db = null;
+    /**
+     * @var \PDO
+     */
+    private static $database = null;
+    /**
+     * @var \PDOStatement
+     */
+    private $_statement = null;
+    private $_params = array();
+    private $_sql;
+
+    public function __construct($connection = null)
+    {
         if ($connection instanceof \PDO) {
-            $this->db = $connection;
+            $this->_db = $connection;
+            self::$database = $connection;
         } else if ($connection != null) {
-            $this->db = \GF\App::getInstance()->getDBConnection($connection);
-            $this->connection = $connection;
+            $this->_db = App::getInstance()->getDbConnection($connection);
+            self::$database = App::getInstance()->getDbConnection($connection);
+            $this->_connection = $connection;
         } else {
-            $this->db = \GF\App::getInstance()->getDBConnection($this->connection);
+            $this->_db = App::getInstance()->getDbConnection($this->_connection);
+            self::$database = App::getInstance()->getDbConnection($this->_connection);
         }
     }
-    
-    /**
-     * 
-     * @param type $sql
-     * @param type $params
-     * @param type $pdoOptions
-     * @return \GF\DB\SimpleDB
-     */
-    public function prepare($sql, $params = array(), $pdoOptions = array()) {
-        $this->stmt = $this->db->prepare($sql, $pdoOptions);
-        $this->params = $params;
-        $this->sql = $sql;
+
+    public function prepare($sql, $params = array(), $pdoOptions = array())
+    {
+        $this->_statement = $this->_db->prepare($sql, $pdoOptions);
+        $this->_params = $params;
+        $this->_sql = $sql;
         return $this;
     }
-    
-    /**
-     * 
-     * @param type $params
-     * @return \GF\DB\SimpleDB
-     */
-    public function execute($params = array()) {
+
+    public function execute($params = array())
+    {
         if ($params) {
-            $this->params = $params;
-        }        
-        $this->stmt->execute($this->params);        
+            $this->_params = $params;
+        }
+        $this->_statement->execute($this->_params);
         return $this;
-    }    
-    
-    public function fetchAllAssoc() {
-        return $this->stmt->fetchAll(\PDO::FETCH_ASSOC);
-    }
-    
-    public function fetchRowAssoc() {
-        return $this->stmt->fetch(\PDO::FETCH_ASSOC);
-    }
-    
-    public function fetchAllNum() {
-        return $this->stmt->fetchAll(\PDO::FETCH_NUM);
     }
 
-    public function fetchRowNum() {
-        return $this->stmt->fetch(\PDO::FETCH_NUM);
+    public function fetchAllAssoc($escape = true)
+    {
+        $data = $this->_statement->fetchAll(\PDO::FETCH_ASSOC);
+        if ($data === false) {
+            return false;
+        }
+
+        if ($escape) {
+            $escaped = array();
+            foreach ($data as $elementKey => $elementData) {
+                foreach ($elementData as $key => $value) {
+                    $escaped[$elementKey][$key] = htmlentities($value);
+                }
+
+            }
+
+            return $escaped;
+        }
+
+        return $data;
     }
 
-    public function fetchAllObj() {
-        return $this->stmt->fetchAll(\PDO::FETCH_OBJ);
+    public function fetchRowAssoc($escape = true)
+    {
+        $data = $this->_statement->fetch(\PDO::FETCH_ASSOC);
+        if ($data === false) {
+            return false;
+        }
+
+        if ($escape) {
+            $escaped = array();
+            foreach ($data as $key => $value) {
+                $escaped[$key] = htmlentities($value);
+            }
+
+            return $escaped;
+        }
+
+        return $data;
     }
 
-    public function fetchRowObj() {
-        return $this->stmt->fetch(\PDO::FETCH_OBJ);
+    public function getLastInsertedId()
+    {
+        return $this->_db->lastInsertId();
     }
 
-    public function fetchAllColumn($column) {
-        return $this->stmt->fetchAll(\PDO::FETCH_COLUMN, $column);
+    public function getStatement()
+    {
+        return $this->_statement;
     }
 
-    public function fetchRowColumn($column) {
-        return $this->stmt->fetch(\PDO::FETCH_BOUND, $column);
+    public static function isAdmin()
+    {
+        $statement = self::$database->prepare("SELECT isAdmin
+                      FROM users
+                      WHERE username = ? AND id = ?");
+        $statement->bindParam(1, App::getInstance()->getSession()->_username);
+        $statement->bindParam(2, App::getInstance()->getSession()->_login);
+        $statement->execute();
+        $response = $statement->fetch(\PDO::FETCH_ASSOC);
+        if ($response) {
+            return Normalizer::normalize($response['isAdmin'], 'bool');
+        }
+
+        return false;
     }
 
-    public function fetchAllClass($class) {
-        return $this->stmt->fetchAll(\PDO::FETCH_CLASS, $class);
+    public static function hasRole($role)
+    {
+        $col = 'is' . ucfirst($role);
+        try {
+            $statement = self::$database->prepare("SELECT {$col}
+                      FROM users
+                      WHERE username = ? AND id = ?");
+            $statement->bindColumn(1, $col);
+            $statement->bindParam(1, App::getInstance()->getSession()->_username);
+            $statement->bindParam(2, App::getInstance()->getSession()->_login);
+
+            $statement->execute();
+            $response = $statement->fetch(\PDO::FETCH_ASSOC);
+            $response = $response['is' . ucfirst($role)];
+        } catch (\PDOException $ex) {
+            throw new \Exception("Check your db, missing role '$col'");
+        }
+
+        if ($response) {
+            return Normalizer::normalize($response, 'bool');
+        }
+
+        return false;
     }
 
-    public function fetchRowClass($class) {
-        return $this->stmt->fetch(\PDO::FETCH_BOUND, $class);
-    }
-
-    public function getLastInsertId() {
-        return $this->db->lastInsertId();
-    }
-
-    public function getAffectedRows() {
-        return $this->stmt->rowCount();
-    }
-
-    public function getSTMT() {
-        return $this->stmt;
+    public function affectedRows()
+    {
+        return $this->_statement->rowCount();
     }
 }
-
-

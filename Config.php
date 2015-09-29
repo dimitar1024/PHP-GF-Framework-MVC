@@ -1,87 +1,79 @@
 <?php
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of Config
- *
- * @author dimitar1024
- */
-
 namespace GF;
 
-class Config {
+class Config
+{
 
     private static $_instance = null;
     private $_configFolder = null;
     private $_configArray = array();
 
-    private function __construct() {
-        
+    private function __construct()
+    {
+
     }
 
-    public function getConfigFolder() {
-        return $this->_configFolder;
-    }
-
-    public function setConfigFolder($configFolder) {
+    public function setConfigFolder($configFolder)
+    {
         if (!$configFolder) {
-            throw new \Exception('Empty config folder path:');
+            throw new \Exception('Empty config folder path.');
         }
-        $_configFolder = realpath($configFolder);
-        if ($_configFolder != FALSE && is_dir($_configFolder) && is_readable($_configFolder)) {
-            //clear old config data
-            $this->_configArray = array();
-            $this->_configFolder = $_configFolder . DIRECTORY_SEPARATOR;
-            $ns = $this->app['namespaces'];
-	    if (is_array($ns)) {
-		\GF\Loader::registerNamespaces($ns);
-	    }
-        } else {
-            throw new \Exception('Config directory read error:' . $configFolder);
-        }
-        
-    }
-    
-    public function includeConfigFile($path) {
-        if (!$path) {
-            //TODO
-            throw new \Exception;
-        }
-        $_file = realpath($path);
-        if ($_file != FALSE && is_file($_file) && is_readable($_file)) {
-            $_basename = explode('.php', basename($_file))[0];
-            $this->_configArray[$_basename]=include $_file;            
-        } else {
-            //TODO
-            throw new \Exception('Config file read error:' . $path);
-        }
-    }
-    
-    public function __get($name) {
 
-        if (!$this->_configArray[$name]) {            
-            $this->includeConfigFile($this->_configFolder . $name . '.php');
+        $realPath = realpath($configFolder);
+        if ($realPath != false && is_dir($realPath) && is_readable($realPath)) {
+            $this->_configArray = array();
+            $this->_configFolder = $realPath . DIRECTORY_SEPARATOR;
+
+            $namespaces = $this->app['namespaces'];
+
+            if (is_array($namespaces)) {
+                Loader::registerNamespaces($namespaces);
+            }
+        } else {
+            throw new \Exception('Config directory read error: ' . $configFolder);
         }
-        if (array_key_exists($name, $this->_configArray)) {            
-            return $this->_configArray[$name];
-        }
-        return null;
     }
-    
-    /**
-     * 
-     * @return \GF\Config
-     */
-    public static function getInstance() {
-        if (self::$_instance == NULL) {
-            self::$_instance = new \GF\Config();
+
+    public static function getInstance()
+    {
+        if (self::$_instance == null) {
+            self::$_instance = new Config();
         }
+
         return self::$_instance;
     }
 
-}
+    public function getConfigFolder()
+    {
+        return $this->_configFolder;
+    }
 
+    public function includeConfigFile($path)
+    {
+        if (!$path) {
+            throw new \Exception('Empty config path');
+        }
+
+        $file = realpath($path);
+        if ($file != false && is_file($file) && is_readable($file)) {
+            $baseName = explode('.php', basename($file))[0];
+            $this->_configArray[$baseName] = include $file;
+        } else {
+            throw new \Exception('Config file read error: ' . $path);
+        }
+    }
+
+    public function __get($name)
+    {
+        if (!$this->_configArray[$name]) {
+            $this->includeConfigFile($this->_configFolder . $name . '.php');
+        }
+
+        if (array_key_exists($name, $this->_configArray)) {
+            return $this->_configArray[$name];
+        }
+
+        return null;
+    }
+}

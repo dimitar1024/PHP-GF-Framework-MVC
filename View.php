@@ -1,115 +1,160 @@
 <?php
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of View
- *
- * @author dimitar1024
- */
 namespace GF;
-class View {
-    
+
+
+class View
+{
     private static $_instance = null;
-    private $___viewPath = null;
-    private $___viewDir = null;
-    private $___data = array();
-    private $___extension = '.php';
-    private $___layoutParts = array();
-    private $___layoutData=array();
-    private function __construct() {        
-        
-        $this->___viewPath = \GF\App::getInstance()->getConfig()->app['viewsDirectory'];
-        if ($this->___viewPath == null) {
-            $this->___viewPath = realpath('../views/');
+    private $_viewPath = null;
+    private $_viewDir = null;
+    private $_viewBag = array();
+    private $_layoutParts = array();
+    private $_layoutData = array();
+    private $_extension = '.php';
+
+    private function __construct()
+    {
+        $this->_viewPath = App::getInstance()->getConfig()->app['views'];
+        if ($this->_viewPath == null) {
+            $this->_viewPath = realpath('../Views/');
         }
+
     }
-    
-    public function setViewDirectory($path) {
+
+    public static function getInstance()
+    {
+        if (self::$_instance == null) {
+            self::$_instance = new View();
+        }
+
+        return self::$_instance;
+    }
+
+    public function __get($name)
+    {
+        return $this->_viewBag[$name];
+    }
+
+    public function __set($name, $value)
+    {
+        $this->_viewBag[$name] = $value;
+    }
+
+    public function setViewDirectory($path)
+    {
         $path = trim($path);
         if ($path) {
             $path = realpath($path) . DIRECTORY_SEPARATOR;
             if (is_dir($path) && is_readable($path)) {
-                $this->___viewDir = $path;
+                $this->_viewDir = $path;
             } else {
-                //todo
-                throw new \Exception('view path',500);
+                throw new \Exception('Problem with view path', 500);
             }
         } else {
-            //todo
-            throw new \Exception('view path',500);
+            throw new \Exception('Problem with view path', 500);
         }
     }
-    
-     public function display($name, $data = array(), $returnAsString = false) {
 
-        if (is_array($data)) {
-            $this->___data = array_merge($this->___data, $data);
-        }
-        
-        if (count($this->___layoutParts) > 0) {
-            foreach ($this->___layoutParts as $k => $v) {
-                $r = $this->_includeFile($v);
-                if ($r) {
-                    $this->___layoutData[$k] = $r;
+    public function display($viewModel)
+    {
+        $this->ValidateViewModel($viewModel);
+        $this->_viewBag = $viewModel;
+        $this->includeFile($viewModel);
+        $file = $this->GetViewModelPath($viewModel);
+        $path = str_replace('.', DIRECTORY_SEPARATOR, $file);
+        $fullPath = $this->_viewDir . $path . $this->_extension;
+        $this->includeView($fullPath);
+    }
+
+    public function displayLayout($name, $returnAsString = false)
+    {
+        if (count($this->_layoutParts) > 0) {
+            foreach ($this->_layoutParts as $key => $template) {
+                $layout = $this->includeFile($template);
+                if ($layout) {
+                    $this->_layoutData[$key] = $layout;
                 }
             }
         }
-        
+
         if ($returnAsString) {
-            return $this->_includeFile($name);
+            return $this->includeFile($name);
         } else {
-            echo $this->_includeFile($name);
+            echo $this->includeFile($name);
         }
     }
-    
-    public function getLayoutData($name){
-        return $this->___layoutData[$name];
-    }
-    
-    public function appendToLayout($key, $template) {
+
+    public function appendToLayout($key, $template)
+    {
         if ($key && $template) {
-            $this->___layoutParts[$key] = $template;
+            if (!is_string($template)) {
+                $this->ValidateViewModel($template);
+                $this->_viewBag[$key] = $template;
+            }
+
+            $this->_layoutParts[$key] = $template;
         } else {
-            throw new \Exception('Layout ruqire valid key and tepmplate', 500);
+            throw new \Exception('Layouts require valid key and template!', 500);
         }
     }
-    private function _includeFile($file) {
-        if ($this->___viewDir == null) {
-            $this->setViewDirectory($this->___viewPath);
-        }       
-        $___fl = $this->___viewDir . str_replace('.', DIRECTORY_SEPARATOR, $file) . $this->___extension;        
-        if (file_exists($___fl) && is_readable($___fl)) {
+
+    public function getLayoutData($name)
+    {
+        return $this->_layoutData[$name];
+    }
+
+    private function includeFile($file)
+    {
+        if ($this->_viewDir == null) {
+            $this->setViewDirectory($this->_viewPath);
+        }
+
+        if (!is_string($file)) {
+            $file = $this->GetViewModelPath($file);
+        }
+
+        $path = str_replace('.', DIRECTORY_SEPARATOR, $file);
+        $fullPath = $this->_viewDir . $path . $this->_extension;
+        if (file_exists($fullPath) && is_readable($fullPath)) {
+			
             ob_start();
-            include $___fl;            
+            $this->includeView($fullPath);
             return ob_get_clean();
         } else {
             throw new \Exception('View ' . $file . ' cannot be included', 500);
-        }        
-    }
-    
-    public function __set($name, $value) {
-        $this->___data[$name] = $value;
-    }
-
-    public function __get($name) {
-        return $this->___data[$name];
-    }
-    
-    /**
-     * 
-     * @return \GF\View
-     */
-    public static function getInstance() {
-        if (self::$_instance == null) {
-            self::$_instance = new \GF\View();
         }
-        return self::$_instance;
     }
-    
+
+    private function includeView($path)
+    {
+        include $path;
+    }
+
+    private function ValidateViewModel($template)
+    {
+        $trace = debug_backtrace();
+        $callerClass = $trace[2]['class'];
+        $callerMethod = $trace[2]['function'];
+        $callerTokens = explode('\\', $callerClass);
+        unset($callerTokens[0]);
+        $expected = implode($callerTokens) . ucfirst($callerMethod) . 'ViewModel';
+        $tokens = explode('\\', get_class($template));
+        unset($tokens[0]);
+        unset($tokens[1]);
+        $given = implode($tokens);
+        if ($expected != $given) {
+            throw new \Exception($callerMethod . " cannot call", 500);
+        }
+    }
+
+    private function GetViewModelPath($file)
+    {
+        $tokens = explode('\\', get_class($file));
+        $tokens[count($tokens) - 1] = strtolower(str_replace('ViewModel', '', $tokens[count($tokens) - 1]));
+        unset($tokens[0]);
+        unset($tokens[1]);
+        $file = implode(DIRECTORY_SEPARATOR, $tokens);
+        return $file;
+    }
 }
-
-

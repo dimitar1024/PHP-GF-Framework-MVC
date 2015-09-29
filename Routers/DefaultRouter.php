@@ -1,27 +1,22 @@
 <?php
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of DefaultRouter
- *
- * @author dimitar1024
- */
-
 namespace GF\Routers;
 
-class DefaultRouter implements \GF\Routers\IRouter {
 
-    public function getURI() {
-        return substr($_SERVER["PHP_SELF"], strlen($_SERVER['SCRIPT_NAME']) + 1);
+class DefaultRouter implements IRouter
+{
+    public function getURI()
+    {
+        return urldecode(strtolower(ltrim($_SERVER['REQUEST_URI'], '/')));
     }
 
-    public function getPost() {
+    public function getPost()
+    {
         return $_POST;
     }
 
+    public function getRequestMethod()
+    {
+        return $_SERVER['REQUEST_METHOD'];
+    }
 }
-

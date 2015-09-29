@@ -1,93 +1,109 @@
 <?php
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of InputData
- *
- * @author dimitar1024
- */
-
 namespace GF;
 
-class InputData {
 
+class InputData
+{
     private static $_instance = null;
     private $_get = array();
     private $_post = array();
     private $_cookies = array();
 
-    private function __construct() {
+    private function __construct()
+    {
         $this->_cookies = $_COOKIE;
     }
 
-    public function setPost($ar) {
-        if (is_array($ar)) {
-            $this->_post = $ar;
-        }
-    }
-
-    public function setGet($ar) {
-        if (is_array($ar)) {
-            $this->_get = $ar;
-        }
-    }
-
-    public function hasGet($id) {
-        return array_key_exists($id, $this->_get);
-    }
-
-    public function hasPost($name) {
-        return array_key_exists($name, $this->_post);
-    }
-    
-    public function hasCookies($name) {
-        return array_key_exists($name, $this->_cookies);
-    }
-
-    public function get($id, $normalize = null, $default = null) {
-        if ($this->hasGet($id)) {
-            if ($normalize != null) {
-                return \GF\Common::normalize($this->_get[$id], $normalize);
-            }
-            return $this->_get[$id];
-        }
-        return $default;        
-    }
-    
-    public function post($name, $normalize = null, $default = null) {
-        if ($this->hasPost($name)) {
-            if ($normalize != null) {
-                return \GF\Common::normalize($this->_post[$name], $normalize);
-            }
-            return $this->_post[$name];
-        }
-        return $default;        
-    }
-    
-    public function cookies($name, $normalize = null, $default = null) {
-        if ($this->hasCookies($name)) {
-            if ($normalize != null) {
-                return \GF\Common::normalize($this->_cookies[$name], $normalize);
-            }
-            return $this->_cookies[$name];
-        }
-        return $default;        
-    }
-
     /**
-     * 
-     * @return \GF\InputData
+     * @return InputData
      */
-    public static function getInstance() {
+    public static function getInstance()
+    {
         if (self::$_instance == null) {
-            self::$_instance = new \GF\InputData();
+            self::$_instance = new InputData();
         }
+
         return self::$_instance;
     }
 
-}
+    /**
+     * @param array $get
+     */
+    public function setGet($get)
+    {
+        if (is_array($get)) {
+            $this->_get = $get;
+        }
+    }
 
+    /**
+     * @param array $post
+     */
+    public function setPost($post)
+    {
+        if (is_array($post)) {
+            $this->_post = $post;
+        }
+    }
+
+    public function get($id, $normalize = null, $default = null)
+    {
+        if ($this->hasGet($id)) {
+            return Normalizer::normalize($this->_get[$id], $normalize);
+        }
+
+        return $default;
+    }
+
+    public function getForDb($name, $normalize = null, $default = null){
+        $normalize = 'noescape|' . $normalize;
+
+        return $this->get($name, $normalize, $default);
+    }
+
+    public function post($name, $normalize = null, $default = null)
+    {
+        if ($this->hasPost($name)) {
+            return Normalizer::normalize($this->_post[$name], $normalize);
+        }
+
+        return $default;
+    }
+
+    public function postForDb($name, $normalize = null, $default = null){
+        $normalize = 'noescape|' . $normalize; // data must clear for database
+
+        return $this->post($name, $normalize, $default);
+    }
+
+    public function cookies($name, $normalize = null, $default = null)
+    {
+        if ($this->hasCookies($name)) {
+            return Normalizer::normalize($this->_cookies[$name], $normalize);
+        }
+
+        return $default;
+    }
+
+    public function cookiesForDb($name, $normalize = null, $default = null){
+        $normalize = 'noescape|' . $normalize; // data must clear for database
+
+        return $this->cookies($name, $normalize, $default);
+    }
+
+    private function hasGet($id)
+    {
+        return array_key_exists($id, $this->_get);
+    }
+
+    private function hasPost($name)
+    {
+        return array_key_exists($name, $this->_post);
+    }
+
+    private function hasCookies($name)
+    {
+        return array_key_exists($name, $this->_cookies);
+    }
+}

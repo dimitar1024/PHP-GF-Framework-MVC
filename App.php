@@ -28,7 +28,7 @@ class App
     private function __construct()
     {
         set_exception_handler(array($this, '_exceptionHandler'));
-        Loader::registerNamespace('FTS', dirname(__FILE__) . DIRECTORY_SEPARATOR);
+        Loader::registerNamespace('GF', dirname(__FILE__) . DIRECTORY_SEPARATOR);
         Loader::registerAutoLoad();
         $this->_config = Config::getInstance();
     }

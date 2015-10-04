@@ -26,7 +26,7 @@ class FrontController
 
     private function __construct()
     {
-        $this->scanCustomRoutes();
+        $this->CustomRoutes();
     }
 
     public static function getInstance()
@@ -87,9 +87,9 @@ class FrontController
 
         $uri = $this->_router->getURI();
 
-        $this->checkSimpleCustomRoutes($uri);
-        $this->checkCustomParamsRoutes($uri);
-        $this->checkForConfigRoute($uri);
+        $this->SimpleRoutes($uri);
+        $this->ParamsRoutes($uri);
+        $this->ForeachConfigRoute($uri);
     }
 
     private function CustomRoutes()
